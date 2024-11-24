@@ -4,18 +4,15 @@ all:
     benchmarker:
 application:
   hosts:
-    env1_app:
-      ansible_host: 13.114.118.33
-      ansible_user: root
-    env2_app:
-      ansible_host: 3.114.157.52
-      ansible_user: root
-    env3_app:
-      ansible_host: 43.206.30.142
-      ansible_user: root
-    env4_app:
-      ansible_host: 54.95.60.213
-      ansible_user: root
+    isucon13-1:
+      ansible_host: 10.0.1.246
+      ansible_user: ubuntu
+    isucon13-2:
+      ansible_host: 10.0.1.79
+      ansible_user: ubuntu
+    isucon13-3:
+      ansible_host: 10.0.1.60
+      ansible_user: ubuntu
 benchmarker:
   hosts:
     env1_bench:
