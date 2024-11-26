@@ -13,6 +13,9 @@ application:
     isucon13-3:
       ansible_host: 10.0.1.60
       ansible_user: ubuntu
+    isucon13-bench:
+      ansible_host: 10.0.1.218
+      ansible_user: ubuntu
 benchmarker:
   hosts:
     isucon13-bench:

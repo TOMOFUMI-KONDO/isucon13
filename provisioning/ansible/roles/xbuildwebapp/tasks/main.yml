@@ -32,46 +32,46 @@
     owner: root
     group: root
 
-- name: Install Node.js
-  become: true
-  become_user: isucon
-  shell:
-    cmd: /opt/xbuild/node-install v20.10.0 /home/isucon/local/node
+# - name: Install Node.js
+#   become: true
+#   become_user: isucon
+#   shell:
+#     cmd: /opt/xbuild/node-install v20.10.0 /home/isucon/local/node
 
-- name: Install Perl
-  become: true
-  become_user: isucon
-  shell:
-    cmd: /opt/xbuild/perl-install 5.38.0 /home/isucon/local/perl -- -Duselongdouble -j $(nproc)
+# - name: Install Perl
+#   become: true
+#   become_user: isucon
+#   shell:
+#     cmd: /opt/xbuild/perl-install 5.38.0 /home/isucon/local/perl -- -Duselongdouble -j $(nproc)
 
-- name: Install cpm for Perl
-  become: true
-  become_user: isucon
-  get_url:
-    url: https://raw.githubusercontent.com/skaji/cpm/main/cpm
-    dest: /home/isucon/local/perl/bin/cpm
-    mode: 0755
+# - name: Install cpm for Perl
+#   become: true
+#   become_user: isucon
+#   get_url:
+#     url: https://raw.githubusercontent.com/skaji/cpm/main/cpm
+#     dest: /home/isucon/local/perl/bin/cpm
+#     mode: 0755
 
-- name: Install Ruby
-  become: true
-  become_user: isucon
-  shell:
-    cmd: MAKE_OPTS=-j$(nproc) /opt/xbuild/ruby-install 3.2.2 /home/isucon/local/ruby
+# - name: Install Ruby
+#   become: true
+#   become_user: isucon
+#   shell:
+#     cmd: MAKE_OPTS=-j$(nproc) /opt/xbuild/ruby-install 3.2.2 /home/isucon/local/ruby
 
-- name: Install PHP
-  become: true
-  become_user: isucon
-  shell: |
-    /opt/xbuild/php-install 8.2.11 /home/isucon/local/php -- \
-    --with-pcre-regex --with-zlib --enable-fpm --enable-pdo --with-pear \
-    --with-mysqli=mysqlnd --with-pdo-mysql=mysqlnd --with-openssl \
-    --with-pcre-regex --with-pcre-dir --with-libxml-dir --enable-opcache \
-    --enable-bcmath --with-bz2 --enable-calendar --enable-cli --enable-shmop \
-    --enable-sysvsem --enable-sysvshm --enable-sysvmsg --enable-mbregex \
-    --enable-mbstring --enable-pcntl --enable-sockets --with-curl --enable-zip
+# - name: Install PHP
+#   become: true
+#   become_user: isucon
+#   shell: |
+#     /opt/xbuild/php-install 8.2.11 /home/isucon/local/php -- \
+#     --with-pcre-regex --with-zlib --enable-fpm --enable-pdo --with-pear \
+#     --with-mysqli=mysqlnd --with-pdo-mysql=mysqlnd --with-openssl \
+#     --with-pcre-regex --with-pcre-dir --with-libxml-dir --enable-opcache \
+#     --enable-bcmath --with-bz2 --enable-calendar --enable-cli --enable-shmop \
+#     --enable-sysvsem --enable-sysvshm --enable-sysvmsg --enable-mbregex \
+#     --enable-mbstring --enable-pcntl --enable-sockets --with-curl --enable-zip
 
-- name: Install Python
-  become: true
-  become_user: isucon
-  shell:
-    cmd: /opt/xbuild/python-install 3.12.0 /home/isucon/local/python
+# - name: Install Python
+#   become: true
+#   become_user: isucon
+#   shell:
+#     cmd: /opt/xbuild/python-install 3.12.0 /home/isucon/local/python
