@@ -3,9 +3,11 @@ package main
 import (
 	"database/sql"
 	"errors"
+	"log"
 	"net/http"
 	"sort"
 	"strconv"
+	"time"
 
 	"github.com/jmoiron/sqlx"
 	"github.com/labstack/echo/v4"
@@ -61,6 +63,7 @@ func (r UserRanking) Less(i, j int) bool {
 }
 
 func getUserStatisticsHandler(c echo.Context) error {
+	since := time.Now()
 	ctx := c.Request().Context()
 
 	if err := verifyUserSession(c); err != nil {
@@ -86,6 +89,7 @@ func getUserStatisticsHandler(c echo.Context) error {
 			return echo.NewHTTPError(http.StatusInternalServerError, "failed to get user: "+err.Error())
 		}
 	}
+	log.Printf("Got user id=%d name=%s (%.2fs)", userID, username, time.Since(since).Seconds())
 
 	// ランク算出
 	var users []*struct {
@@ -109,6 +113,7 @@ func getUserStatisticsHandler(c echo.Context) error {
 			tips      int64
 		}{name: u.Name}
 	}
+	log.Printf("Got users len=%d (%.2fs)", len(userMap), time.Since(since).Seconds())
 
 	var reactions []struct {
 		UserId int64 `db:"user_id"`
@@ -125,6 +130,7 @@ func getUserStatisticsHandler(c echo.Context) error {
 	for _, r := range reactions {
 		userMap[r.UserId].reactions = r.Count
 	}
+	log.Printf("Got reactions len=%d (%.2fs)", len(reactions), time.Since(since).Seconds())
 
 	var tips []struct {
 		UserId int64 `db:"user_id"`
@@ -141,6 +147,7 @@ func getUserStatisticsHandler(c echo.Context) error {
 	for _, t := range tips {
 		userMap[t.UserId].tips = t.Count
 	}
+	log.Printf("Got tips len=%d (%.2fs)", len(tips), time.Since(since).Seconds())
 
 	ranking := make(UserRanking, 0, len(userMap))
 	for _, u := range userMap {
@@ -151,6 +158,7 @@ func getUserStatisticsHandler(c echo.Context) error {
 		})
 	}
 	sort.Sort(ranking)
+	log.Printf("sorted ranking (%.2fs)", time.Since(since).Seconds())
 
 	var rank int64 = 1
 	for i := len(ranking) - 1; i >= 0; i-- {
@@ -160,11 +168,13 @@ func getUserStatisticsHandler(c echo.Context) error {
 		}
 		rank++
 	}
+	log.Printf("calculated ranking (%.2fs)", time.Since(since).Seconds())
 
 	var livestreamIDs []int64
 	if err := tx.SelectContext(ctx, &livestreamIDs, "SELECT id FROM livestreams WHERE user_id = ?", userID); err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to get livestreams: "+err.Error())
 	}
+	log.Printf("got livestreams (%.2fs)", time.Since(since).Seconds())
 
 	// ライブコメント数、チップ合計
 	var livecomments struct {
@@ -180,6 +190,7 @@ func getUserStatisticsHandler(c echo.Context) error {
 	}
 	totalLivecomments := livecomments.Count
 	totalTip := livecomments.TotalTip
+	log.Printf("counted livecomments (%.2fs)", time.Since(since).Seconds())
 
 	// 合計視聴者数
 	var viewersCount int64
@@ -190,6 +201,7 @@ func getUserStatisticsHandler(c echo.Context) error {
 	if err := tx.GetContext(ctx, &viewersCount, query, params...); err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to get livestream_view_history: "+err.Error())
 	}
+	log.Printf("counted viewers (%.2fs)", time.Since(since).Seconds())
 
 	// お気に入り絵文字
 	var favoriteEmoji string
@@ -206,6 +218,7 @@ func getUserStatisticsHandler(c echo.Context) error {
 	if err := tx.GetContext(ctx, &favoriteEmoji, query, username); err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to find favorite emoji: "+err.Error())
 	}
+	log.Printf("got emoji_name (%.2fs)", time.Since(since).Seconds())
 
 	stats := UserStatistics{
 		Rank:              rank,
