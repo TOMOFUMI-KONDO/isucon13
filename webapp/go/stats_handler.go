@@ -142,7 +142,7 @@ func getUserStatisticsHandler(c echo.Context) error {
 		userMap[t.UserId].tips = t.Count
 	}
 
-	var ranking UserRanking
+	ranking := make(UserRanking, 0, len(userMap))
 	for _, u := range userMap {
 		score := u.reactions + u.tips
 		ranking = append(ranking, UserRankingEntry{
