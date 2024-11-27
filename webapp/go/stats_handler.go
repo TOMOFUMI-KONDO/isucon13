@@ -7,6 +7,7 @@ import (
 	"sort"
 	"strconv"
 
+	"github.com/jmoiron/sqlx"
 	"github.com/labstack/echo/v4"
 )
 
@@ -171,34 +172,35 @@ func getUserStatisticsHandler(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to count total reactions: "+err.Error())
 	}
 
-	// ライブコメント数、チップ合計
-	var totalLivecomments int64
-	var totalTip int64
-	var livestreams []*LivestreamModel
-	if err := tx.SelectContext(ctx, &livestreams, "SELECT * FROM livestreams WHERE user_id = ?", user.ID); err != nil && !errors.Is(err, sql.ErrNoRows) {
+	var livestreamIDs []int64
+	if err := tx.SelectContext(ctx, &livestreamIDs, "SELECT id FROM livestreams WHERE user_id = ?", user.ID); err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to get livestreams: "+err.Error())
 	}
 
-	for _, livestream := range livestreams {
-		var livecomments []*LivecommentModel
-		if err := tx.SelectContext(ctx, &livecomments, "SELECT * FROM livecomments WHERE livestream_id = ?", livestream.ID); err != nil && !errors.Is(err, sql.ErrNoRows) {
-			return echo.NewHTTPError(http.StatusInternalServerError, "failed to get livecomments: "+err.Error())
-		}
-
-		for _, livecomment := range livecomments {
-			totalTip += livecomment.Tip
-			totalLivecomments++
-		}
+	// ライブコメント数、チップ合計
+	var totalLivecomments int64
+	var totalTip int64
+	var livecomments []*LivecommentModel
+	query, params, err := sqlx.In("SELECT * FROM livecomments WHERE livestream_id IN (?)", livestreamIDs)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "failed to create livecomments query: "+err.Error())
+	}
+	if err := tx.SelectContext(ctx, &livecomments, query, params...); err != nil && !errors.Is(err, sql.ErrNoRows) {
+		return echo.NewHTTPError(http.StatusInternalServerError, "failed to get livecomments: "+err.Error())
+	}
+	for _, livecomment := range livecomments {
+		totalTip += livecomment.Tip
+		totalLivecomments++
 	}
 
 	// 合計視聴者数
 	var viewersCount int64
-	for _, livestream := range livestreams {
-		var cnt int64
-		if err := tx.GetContext(ctx, &cnt, "SELECT COUNT(*) FROM livestream_viewers_history WHERE livestream_id = ?", livestream.ID); err != nil && !errors.Is(err, sql.ErrNoRows) {
-			return echo.NewHTTPError(http.StatusInternalServerError, "failed to get livestream_view_history: "+err.Error())
-		}
-		viewersCount += cnt
+	query, params, err = sqlx.In("SELECT COUNT(*) FROM livestream_viewers_history WHERE livestream_id IN (?)", livestreamIDs)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "failed to create livestream_view_history query: "+err.Error())
+	}
+	if err := tx.GetContext(ctx, &viewersCount, query, params); err != nil && !errors.Is(err, sql.ErrNoRows) {
+		return echo.NewHTTPError(http.StatusInternalServerError, "failed to get livestream_view_history: "+err.Error())
 	}
 
 	// お気に入り絵文字
