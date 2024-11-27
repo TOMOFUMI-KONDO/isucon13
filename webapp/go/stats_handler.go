@@ -199,7 +199,7 @@ func getUserStatisticsHandler(c echo.Context) error {
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to create livestream_view_history query: "+err.Error())
 	}
-	if err := tx.GetContext(ctx, &viewersCount, query, params); err != nil && !errors.Is(err, sql.ErrNoRows) {
+	if err := tx.GetContext(ctx, &viewersCount, query, params...); err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to get livestream_view_history: "+err.Error())
 	}
 
