@@ -86,11 +86,11 @@ func getUserStatisticsHandler(c echo.Context) error {
 		}
 	}
 
-	var users map[int64]*struct {
+	users := make(map[int64]*struct {
 		name      string
 		reactions int64
 		tips      int64
-	}
+	})
 
 	// ランク算出
 	var reactions []struct {
@@ -111,7 +111,7 @@ func getUserStatisticsHandler(c echo.Context) error {
 			name      string
 			reactions int64
 			tips      int64
-		}{name: r.UserName, reactions: r.count}
+		}{name: r.UserName, reactions: r.Count}
 	}
 
 	var tips []struct {
@@ -127,7 +127,7 @@ func getUserStatisticsHandler(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to count tips: "+err.Error())
 	}
 	for _, t := range tips {
-		users[t.UserId].tips = t.count
+		users[t.UserId].tips = t.Count
 	}
 
 	var ranking UserRanking
