@@ -96,7 +96,7 @@ func getUserStatisticsHandler(c echo.Context) error {
 	var reactions []struct {
 		UserId   int64  `db:"user_id"`
 		UserName string `db:"user_name"`
-		count    int64  `db:"count"`
+		Count    int64  `db:"count"`
 	}
 	query := `
 		SELECT u.id AS user_id, u.name AS user_name, COUNT(*) AS count FROM users u
@@ -116,7 +116,7 @@ func getUserStatisticsHandler(c echo.Context) error {
 
 	var tips []struct {
 		UserId int64 `db:"user_id"`
-		count  int64 `db:"count"`
+		Count  int64 `db:"count"`
 	}
 	query = `
 		SELECT u.id AS user_id, IFNULL(SUM(l2.tip), 0) AS count FROM users u
