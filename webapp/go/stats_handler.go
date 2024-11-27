@@ -101,7 +101,8 @@ func getUserStatisticsHandler(c echo.Context) error {
 	query := `
 		SELECT u.id AS user_id, u.name AS user_name, COUNT(*) AS count FROM users u
 		INNER JOIN livestreams l ON l.user_id = u.id
-		INNER JOIN reactions r ON r.livestream_id = l.id`
+		INNER JOIN reactions r ON r.livestream_id = l.id
+        GROUP BY u.id, u.name`
 	if err := tx.SelectContext(ctx, &reactions, query); err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to count reactions: "+err.Error())
 	}
@@ -120,7 +121,8 @@ func getUserStatisticsHandler(c echo.Context) error {
 	query = `
 		SELECT u.id AS user_id, IFNULL(SUM(l2.tip), 0) AS count FROM users u
 		INNER JOIN livestreams l ON l.user_id = u.id	
-		INNER JOIN livecomments l2 ON l2.livestream_id = l.id`
+		INNER JOIN livecomments l2 ON l2.livestream_id = l.id
+        GROUP BY u.id`
 	if err := tx.SelectContext(ctx, &tips, query, user.ID); err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to count tips: "+err.Error())
 	}
