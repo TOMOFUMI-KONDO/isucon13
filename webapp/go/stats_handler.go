@@ -167,20 +167,19 @@ func getUserStatisticsHandler(c echo.Context) error {
 	}
 
 	// ライブコメント数、チップ合計
-	var totalLivecomments int64
-	var totalTip int64
-	var livecomments []*LivecommentModel
-	query, params, err := sqlx.In("SELECT * FROM livecomments WHERE livestream_id IN (?)", livestreamIDs)
+	var livecomments struct {
+		Count    int64 `db:"count"`
+		TotalTip int64 `db:"total_tip"`
+	}
+	query, params, err := sqlx.In("SELECT COUNT(*) as count, SUM(tip) as total_tip FROM livecomments WHERE livestream_id IN (?)", livestreamIDs)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to create livecomments query: "+err.Error())
 	}
 	if err := tx.SelectContext(ctx, &livecomments, query, params...); err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to get livecomments: "+err.Error())
 	}
-	for _, livecomment := range livecomments {
-		totalTip += livecomment.Tip
-		totalLivecomments++
-	}
+	totalLivecomments := livecomments.Count
+	totalTip := livecomments.TotalTip
 
 	// 合計視聴者数
 	var viewersCount int64
