@@ -211,7 +211,7 @@ func getUserStatisticsHandler(c echo.Context) error {
 	stats := UserStatistics{
 		Rank:              rank,
 		ViewersCount:      viewersCount,
-		TotalReactions:    reactions[userID].Count,
+		TotalReactions:    userMap[userID].reactions,
 		TotalLivecomments: totalLivecomments,
 		TotalTip:          totalTip,
 		FavoriteEmoji:     favoriteEmoji,
