@@ -161,17 +161,6 @@ func getUserStatisticsHandler(c echo.Context) error {
 		rank++
 	}
 
-	// リアクション数
-	var totalReactions int64
-	query = `SELECT COUNT(*) FROM users u 
-    INNER JOIN livestreams l ON l.user_id = u.id 
-    INNER JOIN reactions r ON r.livestream_id = l.id
-    WHERE u.name = ?
-	`
-	if err := tx.GetContext(ctx, &totalReactions, query, username); err != nil && !errors.Is(err, sql.ErrNoRows) {
-		return echo.NewHTTPError(http.StatusInternalServerError, "failed to count total reactions: "+err.Error())
-	}
-
 	var livestreamIDs []int64
 	if err := tx.SelectContext(ctx, &livestreamIDs, "SELECT id FROM livestreams WHERE user_id = ?", userID); err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to get livestreams: "+err.Error())
@@ -222,7 +211,7 @@ func getUserStatisticsHandler(c echo.Context) error {
 	stats := UserStatistics{
 		Rank:              rank,
 		ViewersCount:      viewersCount,
-		TotalReactions:    totalReactions,
+		TotalReactions:    reactions[userID].Count,
 		TotalLivecomments: totalLivecomments,
 		TotalTip:          totalTip,
 		FavoriteEmoji:     favoriteEmoji,
