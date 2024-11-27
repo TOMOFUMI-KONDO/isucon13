@@ -115,19 +115,28 @@ func getUserStatisticsHandler(c echo.Context) error {
 	}
 
 	var tips []struct {
-		UserId int64 `db:"user_id"`
-		Count  int64 `db:"count"`
+		UserId   int64  `db:"user_id"`
+		UserName string `db:"user_name"`
+		Count    int64  `db:"count"`
 	}
 	query = `
-		SELECT u.id AS user_id, IFNULL(SUM(l2.tip), 0) AS count FROM users u
+		SELECT u.id AS user_id, u.name AS user_name, IFNULL(SUM(l2.tip), 0) AS count FROM users u
 		INNER JOIN livestreams l ON l.user_id = u.id	
 		INNER JOIN livecomments l2 ON l2.livestream_id = l.id
-        GROUP BY u.id`
+        GROUP BY u.id, u.name`
 	if err := tx.SelectContext(ctx, &tips, query); err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to count tips: "+err.Error())
 	}
 	for _, t := range tips {
-		users[t.UserId].tips = t.Count
+		if _, ok := users[t.UserId]; ok {
+			users[t.UserId].tips = t.Count
+		} else {
+			users[t.UserId] = &struct {
+				name      string
+				reactions int64
+				tips      int64
+			}{name: t.UserName, tips: t.Count}
+		}
 	}
 
 	var ranking UserRanking
