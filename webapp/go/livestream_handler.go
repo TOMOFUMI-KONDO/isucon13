@@ -521,47 +521,52 @@ func fillLivestreamsResponse(ctx context.Context, tx *sqlx.Tx, livestreamModels 
 		userIDs = append(userIDs, l.UserID)
 	}
 
-	ownerModels := make([]UserModel, 0, len(userIDs))
-	query, params, err := sqlx.In("SELECT * FROM users WHERE id IN (?)", userIDs)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create users query: %w", err)
-	}
-	if err := tx.SelectContext(ctx, &ownerModels, query, params...); err != nil {
-		return nil, fmt.Errorf("failed to query users: %w", err)
-	}
-
-	owners, err := fillUsersResponse(ctx, tx, ownerModels)
-	if err != nil {
-		return nil, fmt.Errorf("failed to fill users response: %w", err)
-	}
-	ownerMap := make(map[int64]*User, len(owners))
-	for _, o := range owners {
-		ownerMap[o.ID] = o
-	}
-
-	var livestreamTagModels []*struct {
-		LivestreamID int64  `db:"livestream_id"`
-		TagID        int64  `db:"tag_id"`
-		TagName      string `db:"tag_name"`
-	}
-	query, params, err = sqlx.In("SELECT lt.livestream_id, lt.tag_id, t.name as tag_name FROM livestream_tags lt INNER JOIN tags t ON lt.tag_id = t.id WHERE lt.livestream_id IN (?)", livestreamIDs)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create livestream_tags query: %w", err)
-	}
-	if err := tx.SelectContext(ctx, &livestreamTagModels, query, params...); err != nil {
-		return nil, fmt.Errorf("failed to query livestream_tags: %w", err)
-	}
-
-	livestreamTagsMap := make(map[int64][]Tag, len(livestreamTagModels))
-	for _, lt := range livestreamTagModels {
-		if _, ok := livestreamTagsMap[lt.LivestreamID]; !ok {
-			livestreamTagsMap[lt.LivestreamID] = make([]Tag, 0)
+	ownerMap := make(map[int64]*User, len(userIDs))
+	if len(userIDs) > 0 {
+		ownerModels := make([]UserModel, 0, len(userIDs))
+		query, params, err := sqlx.In("SELECT * FROM users WHERE id IN (?)", userIDs)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create users query: %w", err)
 		}
-		tag := Tag{
-			ID:   lt.TagID,
-			Name: lt.TagName,
+		if err := tx.SelectContext(ctx, &ownerModels, query, params...); err != nil {
+			return nil, fmt.Errorf("failed to query users: %w", err)
 		}
-		livestreamTagsMap[lt.LivestreamID] = append(livestreamTagsMap[lt.LivestreamID], tag)
+
+		owners, err := fillUsersResponse(ctx, tx, ownerModels)
+		if err != nil {
+			return nil, fmt.Errorf("failed to fill users response: %w", err)
+		}
+		for _, o := range owners {
+			ownerMap[o.ID] = o
+		}
+	}
+
+	livestreamTagsMap := make(map[int64][]Tag, len(livestreamIDs))
+
+	if len(livestreamIDs) > 0 {
+		var livestreamTagModels []*struct {
+			LivestreamID int64  `db:"livestream_id"`
+			TagID        int64  `db:"tag_id"`
+			TagName      string `db:"tag_name"`
+		}
+		query, params, err := sqlx.In("SELECT lt.livestream_id, lt.tag_id, t.name as tag_name FROM livestream_tags lt INNER JOIN tags t ON lt.tag_id = t.id WHERE lt.livestream_id IN (?)", livestreamIDs)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create livestream_tags query: %w", err)
+		}
+		if err := tx.SelectContext(ctx, &livestreamTagModels, query, params...); err != nil {
+			return nil, fmt.Errorf("failed to query livestream_tags: %w", err)
+		}
+
+		for _, lt := range livestreamTagModels {
+			if _, ok := livestreamTagsMap[lt.LivestreamID]; !ok {
+				livestreamTagsMap[lt.LivestreamID] = make([]Tag, 0)
+			}
+			tag := Tag{
+				ID:   lt.TagID,
+				Name: lt.TagName,
+			}
+			livestreamTagsMap[lt.LivestreamID] = append(livestreamTagsMap[lt.LivestreamID], tag)
+		}
 	}
 
 	livestreams := make([]Livestream, 0, len(livestreamModels))
