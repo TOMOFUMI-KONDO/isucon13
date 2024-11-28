@@ -430,3 +430,70 @@ func fillUserResponse(ctx context.Context, tx *sqlx.Tx, userModel UserModel) (Us
 
 	return user, nil
 }
+
+func fillUsersResponse(ctx context.Context, tx *sqlx.Tx, userModels []UserModel) (map[int64]*User, error) {
+	userIds := make([]int64, 0, len(userModels))
+	for _, user := range userModels {
+		userIds = append(userIds, user.ID)
+	}
+
+	themeModels := make([]ThemeModel, 0, len(userIds))
+	query, params, err := sqlx.In("SELECT user_id, id, dark_mode FROM themes WHERE user_id IN (?)", userIds)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create themes query: %w", err)
+	}
+	if err := tx.SelectContext(ctx, &themeModels, query, params...); err != nil {
+		return nil, fmt.Errorf("failed to get themes: %w", err)
+	}
+	themeMap := make(map[int64]*ThemeModel, len(userIds))
+	for _, theme := range themeModels {
+		themeMap[theme.UserID] = &theme
+	}
+
+	fallbackImageBytes, err := os.ReadFile(fallbackImage)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read fallback image")
+	}
+	fallbackImageHash := sha256.Sum256(fallbackImageBytes)
+
+	images := make([]struct {
+		UserId int64  `db:"user_id"`
+		Image  []byte `db:"image"`
+	}, 0, len(userIds))
+	query, params, err = sqlx.In("SELECT user_id, image FROM icons WHERE user_id IN (?)", userIds)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create icons query: %w", err)
+	}
+	if err := tx.SelectContext(ctx, &images, query, params...); err != nil {
+		if !errors.Is(err, sql.ErrNoRows) {
+			return nil, err
+		}
+	}
+	imageMap := make(map[int64]*struct {
+		hash [32]byte
+	}, len(userIds))
+	for _, image := range images {
+		if image.Image == nil {
+			imageMap[image.UserId].hash = fallbackImageHash
+		} else {
+			imageMap[image.UserId].hash = sha256.Sum256(image.Image)
+		}
+	}
+
+	users := make(map[int64]*User, len(userIds))
+	for _, user := range userModels {
+		users[user.ID] = &User{
+			ID:          user.ID,
+			Name:        user.Name,
+			DisplayName: user.DisplayName,
+			Description: user.Description,
+			Theme: Theme{
+				ID:       themeMap[user.ID].ID,
+				DarkMode: themeMap[user.ID].DarkMode,
+			},
+			IconHash: fmt.Sprintf("%x", imageMap[user.ID].hash),
+		}
+	}
+
+	return users, nil
+}

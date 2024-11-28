@@ -300,13 +300,9 @@ func getUserLivestreamsHandler(c echo.Context) error {
 	if err := tx.SelectContext(ctx, &livestreamModels, "SELECT * FROM livestreams WHERE user_id = ?", user.ID); err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to get livestreams: "+err.Error())
 	}
-	livestreams := make([]Livestream, len(livestreamModels))
-	for i := range livestreamModels {
-		livestream, err := fillLivestreamResponse(ctx, tx, *livestreamModels[i])
-		if err != nil {
-			return echo.NewHTTPError(http.StatusInternalServerError, "failed to fill livestream: "+err.Error())
-		}
-		livestreams[i] = livestream
+	livestreams, err := fillLivestreamsResponse(ctx, tx, livestreamModels)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "failed to fill livestreams: "+err.Error())
 	}
 
 	if err := tx.Commit(); err != nil {
@@ -523,4 +519,74 @@ func fillLivestreamResponse(ctx context.Context, tx *sqlx.Tx, livestreamModel Li
 		EndAt:        livestreamModel.EndAt,
 	}
 	return livestream, nil
+}
+
+func fillLivestreamsResponse(ctx context.Context, tx *sqlx.Tx, livestreamModels []*LivestreamModel) ([]Livestream, error) {
+	livestreamIDs := make([]int64, 0, len(livestreamModels))
+	userIDs := make([]int64, 0, len(livestreamModels))
+	for _, l := range livestreamModels {
+		livestreamIDs = append(livestreamIDs, l.ID)
+		userIDs = append(userIDs, l.UserID)
+	}
+
+	ownerModels := make([]UserModel, 0, len(userIDs))
+	query, params, err := sqlx.In("SELECT * FROM users WHERE id IN (?)", userIDs)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create users query: %w", err)
+	}
+	if err := tx.SelectContext(ctx, &ownerModels, query, params...); err != nil {
+		return nil, fmt.Errorf("failed to query users: %w", err)
+	}
+
+	owners, err := fillUsersResponse(ctx, tx, ownerModels)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fill users response: %w", err)
+	}
+	ownerMap := make(map[int64]*User, len(owners))
+	for _, o := range owners {
+		ownerMap[o.ID] = o
+	}
+
+	var livestreamTagModels []*struct {
+		LivestreamID int64  `db:"livestream_id"`
+		TagID        int64  `db:"tag_id"`
+		TagName      string `db:"tag_name"`
+	}
+	query, params, err = sqlx.In("SELECT lt.livestream_id, lt.tag_id, t.name as tag_name FROM livestream_tags lt INNER JOIN tags t ON lt.tag_id = t.id WHERE lt.livestream_id IN (?)", livestreamIDs)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create livestream_tags query: %w", err)
+	}
+	if err := tx.SelectContext(ctx, &livestreamTagModels, query, params...); err != nil {
+		return nil, fmt.Errorf("failed to query livestream_tags: %w", err)
+	}
+
+	livestreamTagsMap := make(map[int64][]Tag, len(livestreamIDs))
+	for _, lt := range livestreamTagModels {
+		if _, ok := livestreamTagsMap[lt.LivestreamID]; !ok {
+			livestreamTagsMap[lt.LivestreamID] = make([]Tag, 0)
+		}
+		tag := Tag{
+			ID:   lt.TagID,
+			Name: lt.TagName,
+		}
+		livestreamTagsMap[lt.LivestreamID] = append(livestreamTagsMap[lt.LivestreamID], tag)
+	}
+
+	livestreams := make([]Livestream, 0, len(livestreamModels))
+	for _, l := range livestreamModels {
+		livestream := Livestream{
+			ID:           l.ID,
+			Owner:        *ownerMap[l.UserID],
+			Title:        l.Title,
+			Tags:         livestreamTagsMap[l.ID],
+			Description:  l.Description,
+			PlaylistUrl:  l.PlaylistUrl,
+			ThumbnailUrl: l.ThumbnailUrl,
+			StartAt:      l.StartAt,
+			EndAt:        l.EndAt,
+		}
+		livestreams = append(livestreams, livestream)
+	}
+
+	return livestreams, nil
 }
