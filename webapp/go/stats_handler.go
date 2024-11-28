@@ -181,7 +181,7 @@ func getUserStatisticsHandler(c echo.Context) error {
 		Count    int64 `db:"count"`
 		TotalTip int64 `db:"total_tip"`
 	}
-	query, params, err := sqlx.In("SELECT COUNT(*) as count, SUM(tip) as total_tip FROM livecomments WHERE livestream_id IN (?)", livestreamIDs)
+	query, params, err := sqlx.In("SELECT COUNT(*) as count, IFNULL(SUM(tip), 0) as total_tip FROM livecomments WHERE livestream_id IN (?)", livestreamIDs)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to create livecomments query: "+err.Error())
 	}
