@@ -469,14 +469,12 @@ func fillUsersResponse(ctx context.Context, tx *sqlx.Tx, userModels []UserModel)
 			return nil, err
 		}
 	}
-	imageMap := make(map[int64]*struct {
-		hash [32]byte
-	}, len(userIds))
+	imageMap := make(map[int64][32]byte, len(userIds))
 	for _, image := range images {
 		if image.Image == nil {
-			imageMap[image.UserId].hash = fallbackImageHash
+			imageMap[image.UserId] = fallbackImageHash
 		} else {
-			imageMap[image.UserId].hash = sha256.Sum256(image.Image)
+			imageMap[image.UserId] = sha256.Sum256(image.Image)
 		}
 	}
 
@@ -484,7 +482,7 @@ func fillUsersResponse(ctx context.Context, tx *sqlx.Tx, userModels []UserModel)
 	for _, user := range userModels {
 		iconHash := fallbackImageHash
 		if v, ok := imageMap[user.ID]; ok {
-			iconHash = v.hash
+			iconHash = v
 		}
 		users[user.ID] = &User{
 			ID:          user.ID,
