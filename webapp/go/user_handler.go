@@ -482,6 +482,10 @@ func fillUsersResponse(ctx context.Context, tx *sqlx.Tx, userModels []UserModel)
 
 	users := make(map[int64]*User, len(userIds))
 	for _, user := range userModels {
+		iconHash := fallbackImageHash
+		if v, ok := imageMap[user.ID]; ok {
+			iconHash = v.hash
+		}
 		users[user.ID] = &User{
 			ID:          user.ID,
 			Name:        user.Name,
@@ -491,7 +495,7 @@ func fillUsersResponse(ctx context.Context, tx *sqlx.Tx, userModels []UserModel)
 				ID:       themeMap[user.ID].ID,
 				DarkMode: themeMap[user.ID].DarkMode,
 			},
-			IconHash: fmt.Sprintf("%x", imageMap[user.ID].hash),
+			IconHash: fmt.Sprintf("%x", iconHash),
 		}
 	}
 
