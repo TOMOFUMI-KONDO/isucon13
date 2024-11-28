@@ -552,7 +552,7 @@ func fillLivestreamsResponse(ctx context.Context, tx *sqlx.Tx, livestreamModels 
 		return nil, fmt.Errorf("failed to query livestream_tags: %w", err)
 	}
 
-	livestreamTagsMap := make(map[int64][]Tag, len(livestreamIDs))
+	livestreamTagsMap := make(map[int64][]Tag, len(livestreamTagModels))
 	for _, lt := range livestreamTagModels {
 		if _, ok := livestreamTagsMap[lt.LivestreamID]; !ok {
 			livestreamTagsMap[lt.LivestreamID] = make([]Tag, 0)
@@ -566,11 +566,15 @@ func fillLivestreamsResponse(ctx context.Context, tx *sqlx.Tx, livestreamModels 
 
 	livestreams := make([]Livestream, 0, len(livestreamModels))
 	for _, l := range livestreamModels {
+		tags := make([]Tag, 0)
+		if v, ok := livestreamTagsMap[l.ID]; ok {
+			tags = v
+		}
 		livestream := Livestream{
 			ID:           l.ID,
 			Owner:        *ownerMap[l.UserID],
 			Title:        l.Title,
-			Tags:         livestreamTagsMap[l.ID],
+			Tags:         tags,
 			Description:  l.Description,
 			PlaylistUrl:  l.PlaylistUrl,
 			ThumbnailUrl: l.ThumbnailUrl,
