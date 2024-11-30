@@ -26,7 +26,8 @@ const (
 	listenPort                     = 8080
 	powerDNSSubdomainAddressEnvKey = "ISUCON13_POWERDNS_SUBDOMAIN_ADDRESS"
 
-	iconPath = "/home/isucon/webapp/public/icons"
+	iconPath     = "/home/isucon/webapp/public/icons"
+	iconHashPath = "/home/isucon/webapp/public/icon_hashes"
 )
 
 var (
