@@ -114,20 +114,10 @@ func postIconHandler(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to get username "+err.Error())
 	}
 
-	if err := os.WriteFile(fmt.Sprintf("%s/%s.jpg", iconPath, username), req.Image, 0644); err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, "failed to save icon: "+err.Error())
-	}
-
-	hash := fmt.Sprintf("%x", sha256.Sum256(req.Image))
-	if err := os.WriteFile(fmt.Sprintf("%s/%s.hash", iconHashPath, username), []byte(hash), 0644); err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, "failed to save icon hash: "+err.Error())
-	}
-
 	if _, err := tx.ExecContext(ctx, "DELETE FROM icons WHERE user_id = ?", userID); err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to delete old user icon: "+err.Error())
 	}
-
-	rs, err := tx.ExecContext(ctx, "INSERT INTO icons (user_id, hash) VALUES (?, ?)", userID, hash)
+	rs, err := tx.ExecContext(ctx, "INSERT INTO icons (user_id, hash) VALUES (?, ?)", userID, fmt.Sprintf("%x", sha256.Sum256(req.Image)))
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to insert new user icon: "+err.Error())
 	}
@@ -138,6 +128,10 @@ func postIconHandler(c echo.Context) error {
 
 	if err := tx.Commit(); err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to commit: "+err.Error())
+	}
+
+	if err := os.WriteFile(fmt.Sprintf("%s/%s.jpg", iconPath, username), req.Image, 0644); err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "failed to save icon: "+err.Error())
 	}
 
 	return c.JSON(http.StatusCreated, &PostIconResponse{
