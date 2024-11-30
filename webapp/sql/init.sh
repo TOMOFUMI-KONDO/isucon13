@@ -70,4 +70,5 @@ mysql -u"$ISUCON_DB_USER" \
 
 bash ../pdns/init_zone.sh 
 
-
+rm -f /home/isucon/webapp/public/icons/*
+cp /home/isucon/webapp/img/NoImage.jpg /home/isucon/webapp/public/icons/NoImage.jpg
