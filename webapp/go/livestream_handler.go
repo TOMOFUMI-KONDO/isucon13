@@ -532,17 +532,14 @@ func fillLivestreamsResponse(ctx context.Context, tx *sqlx.Tx, livestreamModels 
 			return nil, fmt.Errorf("failed to query users: %w", err)
 		}
 
-		owners, err := fillUsersResponse(ctx, tx, ownerModels)
+		o, err := fillUsersResponse(ctx, tx, ownerModels)
 		if err != nil {
 			return nil, fmt.Errorf("failed to fill users response: %w", err)
 		}
-		for _, o := range owners {
-			ownerMap[o.ID] = o
-		}
+		ownerMap = o
 	}
 
 	livestreamTagsMap := make(map[int64][]Tag, len(livestreamIDs))
-
 	if len(livestreamIDs) > 0 {
 		var livestreamTagModels []*struct {
 			LivestreamID int64  `db:"livestream_id"`

@@ -102,14 +102,9 @@ func getLivecommentsHandler(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to get livecomments: "+err.Error())
 	}
 
-	livecomments := make([]Livecomment, len(livecommentModels))
-	for i := range livecommentModels {
-		livecomment, err := fillLivecommentResponse(ctx, tx, livecommentModels[i])
-		if err != nil {
-			return echo.NewHTTPError(http.StatusInternalServerError, "failed to fil livecomments: "+err.Error())
-		}
-
-		livecomments[i] = livecomment
+	livecomments, err := fillLivecommentsResponse(ctx, tx, livecommentModels)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "failed to fill livecomments: "+err.Error())
 	}
 
 	if err := tx.Commit(); err != nil {
@@ -451,6 +446,61 @@ func fillLivecommentResponse(ctx context.Context, tx *sqlx.Tx, livecommentModel 
 	}
 
 	return livecomment, nil
+}
+
+func fillLivecommentsResponse(ctx context.Context, tx *sqlx.Tx, livecommentModels []LivecommentModel) ([]Livecomment, error) {
+	livestreamIDs := make([]int64, 0, len(livecommentModels))
+	userIDs := make([]int64, 0, len(livecommentModels))
+	for _, l := range livecommentModels {
+		livestreamIDs = append(livestreamIDs, l.LivestreamID)
+		userIDs = append(userIDs, l.UserID)
+	}
+
+	commentOwnerModels := make([]UserModel, 0, len(userIDs))
+	query, params, err := sqlx.In("SELECT * FROM users WHERE id IN (?)", userIDs)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create comment-owner query: %w", err)
+	}
+	if err := tx.SelectContext(ctx, &commentOwnerModels, query, params...); err != nil {
+		return nil, fmt.Errorf("failed to query owners: %w", err)
+	}
+	commentOwners, err := fillUsersResponse(ctx, tx, commentOwnerModels)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fill users response: %w", err)
+	}
+
+	livestreamModels := make([]*LivestreamModel, 0, len(livestreamIDs))
+	query, params, err = sqlx.In("SELECT * FROM livestreams WHERE id IN (?)", livestreamIDs)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create livestreams query: %w", err)
+	}
+	if err := tx.SelectContext(ctx, &livestreamModels, query, params...); err != nil {
+		return nil, fmt.Errorf("failed to query livestreams: %w", err)
+	}
+	livestreams, err := fillLivestreamsResponse(ctx, tx, livestreamModels)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fill livestreams response: %w", err)
+	}
+
+	livestreamMap := make(map[int64]*Livestream, len(livestreams))
+	for _, l := range livestreams {
+		livestreamMap[l.ID] = &l
+	}
+
+	livecomments := make([]Livecomment, 0, len(livecommentModels))
+	for _, livecommentModel := range livecommentModels {
+		livecomment := Livecomment{
+			ID:         livecommentModel.ID,
+			User:       *(commentOwners[livecommentModel.UserID]),
+			Livestream: *(livestreamMap[livecommentModel.LivestreamID]),
+			Comment:    livecommentModel.Comment,
+			Tip:        livecommentModel.Tip,
+			CreatedAt:  livecommentModel.CreatedAt,
+		}
+		livecomments = append(livecomments, livecomment)
+	}
+
+	return livecomments, nil
 }
 
 func fillLivecommentReportResponse(ctx context.Context, tx *sqlx.Tx, reportModel LivecommentReportModel) (LivecommentReport, error) {
