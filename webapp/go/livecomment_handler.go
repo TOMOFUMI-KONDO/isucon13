@@ -102,9 +102,13 @@ func getLivecommentsHandler(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to get livecomments: "+err.Error())
 	}
 
-	livecomments, err := fillLivecommentsResponse(ctx, tx, livecommentModels)
-	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, "failed to fill livecomments: "+err.Error())
+	livecomments := make([]Livecomment, 0, len(livecommentModels))
+	if len(livecommentModels) > 0 {
+		l, err := fillLivecommentsResponse(ctx, tx, livecommentModels)
+		if err != nil {
+			return echo.NewHTTPError(http.StatusInternalServerError, "failed to fill livecomments: "+err.Error())
+		}
+		livecomments = l
 	}
 
 	if err := tx.Commit(); err != nil {
