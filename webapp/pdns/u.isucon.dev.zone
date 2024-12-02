@@ -1,5 +1,4 @@
 $TTL 3600
-1.u.isucon.deTTL 3600
 @   SOA  ns1 hostmaster.u.isucon.dev. (
     0      ; serial
     10800  ; refresh
