@@ -68,7 +68,7 @@ mysql -u"$ISUCON_DB_USER" \
 		--port "$ISUCON_DB_PORT" \
 		"$ISUCON_DB_NAME" < initial_livecomments.sql
 
-bash ../pdns/init_zone.sh 
+# bash ../pdns/init_zone.sh 
 
 rm -f /home/isucon/webapp/public/icons/*
 cp /home/isucon/webapp/img/NoImage.jpg /home/isucon/webapp/public/icons/NoImage.jpg
