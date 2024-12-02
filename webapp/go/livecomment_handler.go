@@ -203,7 +203,7 @@ func postLivecommentHandler(c echo.Context) error {
 	}
 
 	for _, ngword := range ngwords {
-		if strings.Contains(req.Comment, ngword.Word) {
+		if strings.Contains(strings.ToLower(req.Comment), ngword.Word) {
 			c.Logger().Infof("comment %q hists ngword %q", req.Comment, ngword.Word)
 			return echo.NewHTTPError(http.StatusBadRequest, "このコメントがスパム判定されました")
 		}
@@ -357,7 +357,7 @@ func moderateHandler(c echo.Context) error {
 	rs, err := tx.NamedExecContext(ctx, "INSERT INTO ng_words(user_id, livestream_id, word, created_at) VALUES (:user_id, :livestream_id, :word, :created_at)", &NGWord{
 		UserID:       int64(userID),
 		LivestreamID: int64(livestreamID),
-		Word:         req.NGWord,
+		Word:         strings.ToLower(req.NGWord),
 		CreatedAt:    time.Now().Unix(),
 	})
 	if err != nil {
