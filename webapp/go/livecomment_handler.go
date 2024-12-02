@@ -370,12 +370,6 @@ func moderateHandler(c echo.Context) error {
 	}
 
 	// NGワードにヒットする過去の投稿も全削除する
-	// ライブコメント一覧取得
-	var livecomments []*LivecommentModel
-	if err := tx.SelectContext(ctx, &livecomments, "SELECT * FROM livecomments"); err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, "failed to get livecomments: "+err.Error())
-	}
-
 	query := "DELETE FROM livecomments WHERE livestream_id = ? AND comment LIKE ?"
 	if _, err := tx.ExecContext(ctx, query, livestreamID, "%"+req.NGWord+"%"); err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to delete old livecomments that hit spams: "+err.Error())
